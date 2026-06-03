@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ gửi Email eSIM - EZ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="bg-blue-700 rounded-t-xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold"><i class="fas fa-paper-plane mr-2"></i> EZ eSIM Mail Sender</h1>
+                <p class="text-blue-200 mt-1 text-sm md:text-base">Công cụ điền thông tin và gửi mail tự động qua Google Apps Script</p>
+            </div>
+            <div class="text-right">
+                <button onclick="clearForm()" class="bg-blue-600 hover:bg-blue-800 text-white py-2 px-4 rounded-lg text-sm transition shadow-sm border border-blue-500">
+                    <i class="fas fa-redo mr-1"></i> Làm mới Form
+                </button>
+            </div>
+        </div>
+
+        <!-- Cấu hình Hệ thống -->
+        <div class="bg-white p-6 border-b border-gray-200">
+            <h2 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-cog text-gray-500 mr-2"></i>1. Cấu hình Hệ thống (Chỉ cần điền 1 lần)</h2>
+            <div class="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">A. Link Web App URL (Google Apps Script) <span class="text-red-500">*</span></label>
+                    <input type="text" id="gas_url" placeholder="Bắt buộc: Dán link Web App URL vào đây (https://script.google.com/macros/s/...)" 
+                        class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">B. Link Google Sheet (Để lưu lịch sử đơn hàng) - Tùy chọn</label>
+                    <input type="text" id="sheet_url" placeholder="Tùy chọn: Dán link Google Sheet của bạn vào đây (https://docs.google.com/spreadsheets/d/...)" 
+                        class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition shadow-sm">
+                </div>
+                <button onclick="saveConfig()" class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-lg transition shadow-md">
+                    <i class="fas fa-save mr-1"></i> Lưu Cấu Hình
+                </button>
+                <p id="config_msg" class="text-sm text-green-600 mt-3 hidden font-medium"><i class="fas fa-check-circle mr-1"></i> Đã lưu cấu hình thành công vào trình duyệt!</p>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <form id="esimForm" class="bg-white rounded-b-xl shadow-lg p-6" onsubmit="sendEmail(event)">
+            
+            <h2 class="text-lg font-bold text-gray-800 mb-6"><i class="fas fa-edit text-gray-500 mr-2"></i>2. Thông tin Gửi Email</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                
+                <!-- Cột 1: Thông tin khách hàng & Đơn hàng -->
+                <div class="space-y-5">
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 h-full">
+                        <h3 class="text-md font-bold text-blue-800 mb-4 border-b border-blue-200 pb-2">Thông tin Khách & Đơn hàng</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email người nhận <span class="text-red-500">*</span></label>
+                            <input type="email" id="customer_email" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" placeholder="khachhang@gmail.com">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tên khách hàng <span class="text-gray-400 text-xs font-normal">(Không bắt buộc)</span></label>
+                            <input type="text" id="customer_name" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" placeholder="Để trống cũng được">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Mã đơn hàng (Order Number) <span class="text-red-500">*</span></label>
+                            <input type="text" id="order_number" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-blue-900 shadow-sm" placeholder="VD: TVLK-123456">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mt-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tên gói cước</label>
+                                <input type="text" id="package_name" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm text-sm" placeholder="VD: Thái Lan 5 Ngày">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Loại gói</label>
+                                <input type="text" id="package_type" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm text-sm" placeholder="VD: Data Only">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cột 2: Thông tin eSIM -->
+                <div class="space-y-5">
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                        <h3 class="text-md font-bold text-green-800 mb-4 border-b border-green-200 pb-2">Dữ liệu eSIM</h3>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Mã số ICCID <span class="text-red-500">*</span></label>
+                            <input type="text" id="iccid" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm shadow-sm" placeholder="89852...">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Link Ảnh QR Code <span class="text-red-500">*</span></label>
+                            <input type="url" id="qr_code_image" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-500 outline-none text-sm shadow-sm" placeholder="https://domain.com/qr-image.png">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Link cài nhanh / Link xem QR</label>
+                            <p class="text-xs text-gray-500 mb-1">Link web cài đặt hoặc dạng LPA:1$... Bỏ trống nếu không có.</p>
+                            <input type="text" id="fast_install_link" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-500 outline-none text-sm shadow-sm" placeholder="https://... hoặc LPA:1$...">
+                        </div>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                        <h3 class="text-md font-bold text-purple-800 mb-4 border-b border-purple-200 pb-2">Banner Khuyến mãi (Tùy chọn)</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Link Ảnh Banner</label>
+                            <p class="text-xs text-purple-600 mb-1">Để trống thì phần khuyến mãi sẽ tự động ẨN trong mail.</p>
+                            <input type="url" id="promo_banner_image" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-purple-500 outline-none text-sm shadow-sm" placeholder="https://... (để trống nếu không dùng)">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Link khi click vào Banner</label>
+                            <input type="url" id="promo_banner_link" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-purple-500 outline-none text-sm shadow-sm" placeholder="https://... (để trống nếu không dùng)">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Nút Submit -->
+            <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div id="status_message" class="text-sm font-medium min-h-[24px]"></div>
+                
+                <button type="submit" id="submitBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition flex items-center justify-center min-w-[200px]">
+                    <span id="btnText"><i class="fas fa-paper-plane mr-2"></i> Gửi Email Ngay</span>
+                    <div id="spinner" class="loader border-4 border-white border-solid rounded-full w-5 h-5 ml-2 hidden"></div>
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    <script>
+        // Khi tải trang, lấy link Apps Script & Sheet đã lưu (nếu có)
+        window.onload = function() {
+            const savedGasUrl = localStorage.getItem('gasUrl');
+            const savedSheetUrl = localStorage.getItem('sheetUrl');
+            
+            if(savedGasUrl) {
+                document.getElementById('gas_url').value = savedGasUrl;
+            }
+            if(savedSheetUrl) {
+                document.getElementById('sheet_url').value = savedSheetUrl;
+            }
+        }
+
+        // Lưu link cấu hình
+        function saveConfig() {
+            const gasUrl = document.getElementById('gas_url').value.trim();
+            const sheetUrl = document.getElementById('sheet_url').value.trim();
+            
+            if(gasUrl) {
+                localStorage.setItem('gasUrl', gasUrl);
+                localStorage.setItem('sheetUrl', sheetUrl);
+                const msg = document.getElementById('config_msg');
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            } else {
+                alert("Vui lòng nhập Link Web App URL của Google Apps Script trước!");
+                document.getElementById('gas_url').focus();
+            }
+        }
+
+        // Xóa trắng form (chỉ xóa phần nhập, không xóa phần Cấu hình)
+        function clearForm() {
+            if(confirm("Bạn có chắc muốn làm mới thông tin đơn hàng hiện tại?")) {
+                // Chỉ reset các trường nhập đơn, giữ nguyên Gas URL và Sheet URL
+                const fields = ['customer_email', 'customer_name', 'order_number', 'package_name', 'package_type', 'iccid', 'qr_code_image', 'fast_install_link', 'promo_banner_image', 'promo_banner_link'];
+                fields.forEach(field => document.getElementById(field).value = '');
+                document.getElementById('status_message').innerHTML = '';
+            }
+        }
+
+        // Xử lý gửi dữ liệu
+        async function sendEmail(event) {
+            event.preventDefault();
+            
+            const gasUrl = document.getElementById('gas_url').value.trim();
+            if(!gasUrl) {
+                alert("LỖI: Bạn chưa điền Link Web App URL của Google Apps Script ở mục 1 (Cấu hình). Vui lòng điền và bấm Lưu Cấu Hình!");
+                document.getElementById('gas_url').focus();
+                return;
+            }
+
+            // Thu thập dữ liệu
+            const formData = {
+                sheet_url: document.getElementById('sheet_url').value.trim(), // Link sheet
+                customer_email: document.getElementById('customer_email').value.trim(),
+                customer_name: document.getElementById('customer_name').value.trim(),
+                order_number: document.getElementById('order_number').value.trim(),
+                package_name: document.getElementById('package_name').value.trim() || '-',
+                package_type: document.getElementById('package_type').value.trim() || '-',
+                iccid: document.getElementById('iccid').value.trim(),
+                qr_code_image: document.getElementById('qr_code_image').value.trim(),
+                fast_install_link: document.getElementById('fast_install_link').value.trim() || '#',
+                promo_banner_image: document.getElementById('promo_banner_image').value.trim(), // Trống sẽ tự ẩn
+                promo_banner_link: document.getElementById('promo_banner_link').value.trim() || '#'
+            };
+
+            // Trạng thái Loading
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const spinner = document.getElementById('spinner');
+            const statusMsg = document.getElementById('status_message');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            btnText.innerText = "Đang xử lý...";
+            spinner.classList.remove('hidden');
+            statusMsg.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i> Đang kết nối tới máy chủ gửi mail...</span>';
+
+            try {
+                // Sử dụng fetch với text/plain để tránh lỗi CORS Preflight của Google
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if(result.status === 'success') {
+                    statusMsg.innerHTML = `<span class="text-green-600 font-bold"><i class="fas fa-check-circle mr-1"></i> Gửi email thành công cho ${formData.customer_email}! ${result.message.includes('Sheet') ? '(Đã lưu Sheet)' : ''}</span>`;
+                } else {
+                    statusMsg.innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> Lỗi hệ thống: ${result.message}</span>`;
+                }
+
+            } catch (error) {
+                console.error("Lỗi:", error);
+                statusMsg.innerHTML = '<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> Lỗi mạng hoặc Link Apps Script của bạn bị sai/chưa cấp quyền.</span>';
+            } finally {
+                // Khôi phục nút
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                btnText.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Gửi Email Ngay';
+                spinner.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
