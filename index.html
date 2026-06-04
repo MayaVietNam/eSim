@@ -9,7 +9,7 @@
     <style>
         body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
         .loader {
-            border-top-color: #3498db;
+            border-top-color: #ffffff;
             -webkit-animation: spinner 1.5s linear infinite;
             animation: spinner 1.5s linear infinite;
         }
@@ -22,7 +22,6 @@
 <body class="p-4 md:p-6">
 
     <div class="max-w-5xl mx-auto">
-        <!-- Header -->
         <div class="bg-blue-700 rounded-t-xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold"><i class="fas fa-paper-plane mr-2"></i> EZ eSIM Mail Sender</h1>
@@ -35,10 +34,20 @@
             </div>
         </div>
 
-        <!-- Main Form -->
         <form id="esimForm" class="bg-white rounded-b-xl shadow-lg p-6" onsubmit="sendEmail(event)">
             
-            <h2 class="text-lg font-bold text-gray-800 mb-6"><i class="fas fa-edit text-gray-500 mr-2"></i>Nhập thông tin đơn hàng</h2>
+            <div class="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
+                <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-edit text-gray-500 mr-2"></i>Nhập thông tin đơn hàng</h2>
+                
+                <!-- Phần chọn ngôn ngữ -->
+                <div class="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                    <label class="text-sm font-semibold text-gray-700"><i class="fas fa-language text-blue-500 mr-1"></i> Ngôn ngữ Email:</label>
+                    <select id="email_language" class="border-none bg-transparent text-sm font-bold text-blue-700 focus:ring-0 outline-none cursor-pointer">
+                        <option value="en">English (Tiếng Anh)</option>
+                        <option value="vi">Vietnamese (Tiếng Việt)</option>
+                    </select>
+                </div>
+            </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 
@@ -62,7 +71,7 @@
                             <input type="text" id="order_number" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-blue-900 shadow-sm" placeholder="VD: TVLK-123456">
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4 mt-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Tên gói cước</label>
                                 <input type="text" id="package_name" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm text-sm" placeholder="VD: Thái Lan 5 Ngày">
@@ -70,6 +79,11 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Loại gói</label>
                                 <input type="text" id="package_type" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm text-sm" placeholder="VD: Data Only">
+                            </div>
+                            <!-- Ô Nhập Link Check Data mới -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Link Check Data</label>
+                                <input type="text" id="check_data_link" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm text-sm" placeholder="https://... (nếu có)">
                             </div>
                         </div>
                     </div>
@@ -87,13 +101,19 @@
 
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Link Ảnh QR Code <span class="text-red-500">*</span></label>
-                            <input type="url" id="qr_code_image" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-500 outline-none text-sm shadow-sm" placeholder="https://domain.com/qr-image.png">
+                            <input type="url" id="qr_code_image" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-500 outline-none text-sm shadow-sm" placeholder="https://... (.png / .jpg)">
                         </div>
 
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Link cài nhanh / Link xem QR</label>
-                            <p class="text-xs text-gray-500 mb-1">Link web cài đặt hoặc dạng LPA:1$... Bỏ trống nếu không có.</p>
-                            <input type="text" id="fast_install_link" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-500 outline-none text-sm shadow-sm" placeholder="https://... hoặc LPA:1$...">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Link cài đặt iOS</label>
+                                <input type="text" id="ios_link" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-500 outline-none text-sm shadow-sm" placeholder="https://... (nếu có)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Link Android (hoặc LPA)</label>
+                                <p class="text-[11px] text-gray-500 mb-1">Hệ thống sẽ tự đổi mã LPA thành Link.</p>
+                                <input type="text" id="android_lpa" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-500 outline-none text-sm shadow-sm" placeholder="LPA:1$... hoặc https://...">
+                            </div>
                         </div>
                     </div>
                     
@@ -102,7 +122,6 @@
                         
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Link Ảnh Banner</label>
-                            <p class="text-xs text-purple-600 mb-1">Để trống thì phần khuyến mãi sẽ tự động ẨN trong mail.</p>
                             <input type="url" id="promo_banner_image" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-purple-500 outline-none text-sm shadow-sm" placeholder="https://... (để trống nếu không dùng)">
                         </div>
                         
@@ -115,13 +134,12 @@
 
             </div>
 
-            <!-- Nút Submit -->
             <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div id="status_message" class="text-sm font-medium min-h-[24px]"></div>
                 
                 <button type="submit" id="submitBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition flex items-center justify-center min-w-[200px]">
                     <span id="btnText"><i class="fas fa-paper-plane mr-2"></i> Gửi Email Ngay</span>
-                    <div id="spinner" class="loader border-4 border-white border-solid rounded-full w-5 h-5 ml-2 hidden"></div>
+                    <div id="spinner" class="loader border-4 border-transparent border-t-white border-solid rounded-full w-5 h-5 ml-2 hidden"></div>
                 </button>
             </div>
 
@@ -130,55 +148,63 @@
 
     <script>
         // =========================================================================
-        // CẤU HÌNH HỆ THỐNG: DÁN LINK CỦA BẠN VÀO GIỮA 2 DẤU NGOẶC KÉP Ở DƯỚI ĐÂY
+        // CẤU HÌNH HỆ THỐNG
         // =========================================================================
         
-        // 1. Dán link Apps Script (Bắt buộc)
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwqpWynzviQtm8YU2vJ75hruWpCVScEgG8j7hlv443DRJ1F4DHKsy1RDofJ1P2E39Ba/exec"; 
+        // Dán link Apps Script MỚI NHẤT của bạn vào đây (Bắt buộc phải triển khai mới để tính năng dịch hoạt động)
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxa_EFm094hqEFNWSSP5siNhw1EwJNnPa5dL3GvYPKQXn5H58HR6zOuqQDP--MQXfdj/exec"; 
         
-        // 2. Dán link Google Sheet (Tùy chọn, để trống nếu không lưu)
+        // Link Google Sheet
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/18XtBhNZW8J9CAL-L_XMUcIEYiX4_l0wR8br5Pi-cKoY/edit?gid=0#gid=0"; 
 
         // =========================================================================
 
-        // Xóa trắng form
         function clearForm() {
             if(confirm("Bạn có chắc muốn làm mới thông tin đơn hàng hiện tại?")) {
-                const fields = ['customer_email', 'customer_name', 'order_number', 'package_name', 'package_type', 'iccid', 'qr_code_image', 'fast_install_link', 'promo_banner_image', 'promo_banner_link'];
-                fields.forEach(field => document.getElementById(field).value = '');
+                const fields = ['customer_email', 'customer_name', 'order_number', 'package_name', 'package_type', 'check_data_link', 'iccid', 'qr_code_image', 'ios_link', 'android_lpa', 'promo_banner_image', 'promo_banner_link'];
+                fields.forEach(field => {
+                    const el = document.getElementById(field);
+                    if(el) el.value = '';
+                });
                 document.getElementById('status_message').innerHTML = '';
             }
         }
 
-        // Xử lý gửi dữ liệu
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        };
+
         async function sendEmail(event) {
             event.preventDefault();
             
+            const statusMsg = document.getElementById('status_message');
+            
             if(!GAS_URL || GAS_URL.trim() === "") {
-                alert("LỖI: Bạn chưa cài đặt Link Apps Script. Vui lòng mở file code HTML, tìm dòng chữ const GAS_URL = \"\" và dán link vào giữa 2 dấu ngoặc kép!");
+                statusMsg.innerHTML = '<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> LỖI: Cần dán Link Apps Script.</span>';
                 return;
             }
 
-            // Thu thập dữ liệu
             const formData = {
-                sheet_url: SHEET_URL.trim(), // Link sheet lấy từ cấu hình cứng
-                customer_email: document.getElementById('customer_email').value.trim(),
-                customer_name: document.getElementById('customer_name').value.trim(),
-                order_number: document.getElementById('order_number').value.trim(),
-                package_name: document.getElementById('package_name').value.trim() || '-',
-                package_type: document.getElementById('package_type').value.trim() || '-',
-                iccid: document.getElementById('iccid').value.trim(),
-                qr_code_image: document.getElementById('qr_code_image').value.trim(),
-                fast_install_link: document.getElementById('fast_install_link').value.trim() || '#',
-                promo_banner_image: document.getElementById('promo_banner_image').value.trim(), // Trống sẽ tự ẩn
-                promo_banner_link: document.getElementById('promo_banner_link').value.trim() || '#'
+                sheet_url: SHEET_URL.trim(), 
+                email_language: getVal('email_language'), // Lấy ngôn ngữ gửi sang GAS
+                customer_email: getVal('customer_email'),
+                customer_name: getVal('customer_name'),
+                order_number: getVal('order_number'),
+                package_name: getVal('package_name') || '-',
+                package_type: getVal('package_type') || '-',
+                check_data_link: getVal('check_data_link'), // Gửi link check data
+                iccid: getVal('iccid'),
+                qr_code_image: getVal('qr_code_image'),
+                ios_link: getVal('ios_link') || '#',
+                android_lpa: getVal('android_lpa') || '#',
+                promo_banner_image: getVal('promo_banner_image'),
+                promo_banner_link: getVal('promo_banner_link') || '#'
             };
 
-            // Trạng thái Loading
             const btn = document.getElementById('submitBtn');
             const btnText = document.getElementById('btnText');
             const spinner = document.getElementById('spinner');
-            const statusMsg = document.getElementById('status_message');
 
             btn.disabled = true;
             btn.classList.add('opacity-75', 'cursor-not-allowed');
@@ -187,7 +213,6 @@
             statusMsg.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i> Đang kết nối tới máy chủ gửi mail...</span>';
 
             try {
-                // Sử dụng fetch với text/plain để tránh lỗi CORS Preflight của Google
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: {
@@ -206,15 +231,8 @@
 
             } catch (error) {
                 console.error("Lỗi:", error);
-                
-                // Bắt chính xác lỗi CORS và đưa ra hướng dẫn cụ thể
-                if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-                    statusMsg.innerHTML = '<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> Lỗi CORS: Google chặn quyền truy cập. Bạn hãy vào Apps Script > Chọn Triển khai mới > Mục Quyền truy cập phải chọn "Bất kỳ ai (Anyone)" > Lấy link mới dán lại vào Form nhé!</span>';
-                } else {
-                    statusMsg.innerHTML = '<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> Lỗi mạng hoặc Link Apps Script của bạn bị sai. Vui lòng kiểm tra lại.</span>';
-                }
+                statusMsg.innerHTML = '<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> Lỗi mạng hoặc Link Apps Script bị sai. Vui lòng kiểm tra Console.</span>';
             } finally {
-                // Khôi phục nút
                 btn.disabled = false;
                 btn.classList.remove('opacity-75', 'cursor-not-allowed');
                 btnText.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Gửi Email Ngay';
