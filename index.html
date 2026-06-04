@@ -35,31 +35,10 @@
             </div>
         </div>
 
-        <!-- Cấu hình Hệ thống -->
-        <div class="bg-white p-6 border-b border-gray-200">
-            <h2 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-cog text-gray-500 mr-2"></i>1. Cấu hình Hệ thống (Chỉ cần điền 1 lần)</h2>
-            <div class="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">A. Link Web App URL (Google Apps Script) <span class="text-red-500">*</span></label>
-                    <input type="text" id="gas_url" placeholder="Bắt buộc: Dán link Web App URL vào đây (https://script.google.com/macros/s/...)" 
-                        class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition shadow-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">B. Link Google Sheet (Để lưu lịch sử đơn hàng) - Tùy chọn</label>
-                    <input type="text" id="sheet_url" placeholder="Tùy chọn: Dán link Google Sheet của bạn vào đây (https://docs.google.com/spreadsheets/d/...)" 
-                        class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition shadow-sm">
-                </div>
-                <button onclick="saveConfig()" class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-lg transition shadow-md">
-                    <i class="fas fa-save mr-1"></i> Lưu Cấu Hình
-                </button>
-                <p id="config_msg" class="text-sm text-green-600 mt-3 hidden font-medium"><i class="fas fa-check-circle mr-1"></i> Đã lưu cấu hình thành công vào trình duyệt!</p>
-            </div>
-        </div>
-
         <!-- Main Form -->
         <form id="esimForm" class="bg-white rounded-b-xl shadow-lg p-6" onsubmit="sendEmail(event)">
             
-            <h2 class="text-lg font-bold text-gray-800 mb-6"><i class="fas fa-edit text-gray-500 mr-2"></i>2. Thông tin Gửi Email</h2>
+            <h2 class="text-lg font-bold text-gray-800 mb-6"><i class="fas fa-edit text-gray-500 mr-2"></i>Nhập thông tin đơn hàng</h2>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 
@@ -150,40 +129,21 @@
     </div>
 
     <script>
-        // Khi tải trang, lấy link Apps Script & Sheet đã lưu (nếu có)
-        window.onload = function() {
-            const savedGasUrl = localStorage.getItem('gasUrl');
-            const savedSheetUrl = localStorage.getItem('sheetUrl');
-            
-            if(savedGasUrl) {
-                document.getElementById('gas_url').value = savedGasUrl;
-            }
-            if(savedSheetUrl) {
-                document.getElementById('sheet_url').value = savedSheetUrl;
-            }
-        }
+        // =========================================================================
+        // CẤU HÌNH HỆ THỐNG: DÁN LINK CỦA BẠN VÀO GIỮA 2 DẤU NGOẶC KÉP Ở DƯỚI ĐÂY
+        // =========================================================================
+        
+        // 1. Dán link Apps Script (Bắt buộc)
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyL8F63p7rCUeyRV4xVTLHJCdwLvPnkRjQGS5Ok1ugH-mY5IoSKKGf03lKDHC3KPIRz/exec"; 
+        
+        // 2. Dán link Google Sheet (Tùy chọn, để trống nếu không lưu)
+        const SHEET_URL = "https://docs.google.com/spreadsheets/d/18XtBhNZW8J9CAL-L_XMUcIEYiX4_l0wR8br5Pi-cKoY/edit?gid=0#gid=0"; 
 
-        // Lưu link cấu hình
-        function saveConfig() {
-            const gasUrl = document.getElementById('gas_url').value.trim();
-            const sheetUrl = document.getElementById('sheet_url').value.trim();
-            
-            if(gasUrl) {
-                localStorage.setItem('gasUrl', gasUrl);
-                localStorage.setItem('sheetUrl', sheetUrl);
-                const msg = document.getElementById('config_msg');
-                msg.classList.remove('hidden');
-                setTimeout(() => msg.classList.add('hidden'), 3000);
-            } else {
-                alert("Vui lòng nhập Link Web App URL của Google Apps Script trước!");
-                document.getElementById('gas_url').focus();
-            }
-        }
+        // =========================================================================
 
-        // Xóa trắng form (chỉ xóa phần nhập, không xóa phần Cấu hình)
+        // Xóa trắng form
         function clearForm() {
             if(confirm("Bạn có chắc muốn làm mới thông tin đơn hàng hiện tại?")) {
-                // Chỉ reset các trường nhập đơn, giữ nguyên Gas URL và Sheet URL
                 const fields = ['customer_email', 'customer_name', 'order_number', 'package_name', 'package_type', 'iccid', 'qr_code_image', 'fast_install_link', 'promo_banner_image', 'promo_banner_link'];
                 fields.forEach(field => document.getElementById(field).value = '');
                 document.getElementById('status_message').innerHTML = '';
@@ -194,16 +154,14 @@
         async function sendEmail(event) {
             event.preventDefault();
             
-            const gasUrl = document.getElementById('gas_url').value.trim();
-            if(!gasUrl) {
-                alert("LỖI: Bạn chưa điền Link Web App URL của Google Apps Script ở mục 1 (Cấu hình). Vui lòng điền và bấm Lưu Cấu Hình!");
-                document.getElementById('gas_url').focus();
+            if(!GAS_URL || GAS_URL.trim() === "") {
+                alert("LỖI: Bạn chưa cài đặt Link Apps Script. Vui lòng mở file code HTML, tìm dòng chữ const GAS_URL = \"\" và dán link vào giữa 2 dấu ngoặc kép!");
                 return;
             }
 
             // Thu thập dữ liệu
             const formData = {
-                sheet_url: document.getElementById('sheet_url').value.trim(), // Link sheet
+                sheet_url: SHEET_URL.trim(), // Link sheet lấy từ cấu hình cứng
                 customer_email: document.getElementById('customer_email').value.trim(),
                 customer_name: document.getElementById('customer_name').value.trim(),
                 order_number: document.getElementById('order_number').value.trim(),
@@ -230,7 +188,7 @@
 
             try {
                 // Sử dụng fetch với text/plain để tránh lỗi CORS Preflight của Google
-                const response = await fetch(gasUrl, {
+                const response = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'text/plain;charset=utf-8',
@@ -248,7 +206,13 @@
 
             } catch (error) {
                 console.error("Lỗi:", error);
-                statusMsg.innerHTML = '<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> Lỗi mạng hoặc Link Apps Script của bạn bị sai/chưa cấp quyền.</span>';
+                
+                // Bắt chính xác lỗi CORS và đưa ra hướng dẫn cụ thể
+                if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+                    statusMsg.innerHTML = '<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> Lỗi CORS: Google chặn quyền truy cập. Bạn hãy vào Apps Script > Chọn Triển khai mới > Mục Quyền truy cập phải chọn "Bất kỳ ai (Anyone)" > Lấy link mới dán lại vào Form nhé!</span>';
+                } else {
+                    statusMsg.innerHTML = '<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> Lỗi mạng hoặc Link Apps Script của bạn bị sai. Vui lòng kiểm tra lại.</span>';
+                }
             } finally {
                 // Khôi phục nút
                 btn.disabled = false;
