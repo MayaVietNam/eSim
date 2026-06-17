@@ -258,7 +258,7 @@
                 "email_lang_label": "Ngôn ngữ thư:",
                 "lang_vi": "Tiếng Việt",
                 "lang_en": "Tiếng Anh",
-                "section_order": "Thông tin Khách & Đơn hàng",
+                "section_order": "Thông কাহিনী Khách & Đơn hàng",
                 "lbl_email": "Email người nhận",
                 "ph_email": "khachhang@gmail.com",
                 "lbl_name": "Tên khách hàng",
@@ -291,7 +291,7 @@
                 "msg_success": "Gửi email thành công cho",
                 "msg_err_sys": "Lỗi hệ thống:",
                 "msg_err_net": "Lỗi mạng không xác định.",
-                "err_img_upload": "Trình duyệt chặn tải ảnh! Hãy MỞ TAB ẨN DANH (Incognito) hoặc TẮT Adblock/Brave Shields.",
+                "err_img_upload": "Lỗi tải ảnh QR! Vui lòng thử lại bằng cách dán lại ảnh.",
                 "err_gas_conn": "Lỗi kết nối máy chủ gửi Mail! Vui lòng kiểm tra lại link Apps Script.",
                 "err_gas_parse": "Lỗi quyền truy cập Apps Script! Hãy chắc chắn bạn đã Deploy cấu hình quyền là 'Anyone' (Bất kỳ ai).",
                 "modal_title": "Xác nhận",
@@ -341,7 +341,7 @@
                 "msg_success": "Successfully sent email to",
                 "msg_err_sys": "System Error:",
                 "msg_err_net": "Unknown network error.",
-                "err_img_upload": "Browser blocked image upload! Try using INCOGNITO TAB or disabling Adblock/Brave Shields.",
+                "err_img_upload": "QR Image Upload Failed! Please try re-pasting the image.",
                 "err_gas_conn": "Mail server connection failed! Check your Apps Script link.",
                 "err_gas_parse": "Permission error! Make sure Apps Script is deployed with 'Anyone' access.",
                 "modal_title": "Confirmation",
@@ -509,6 +509,19 @@
             return el ? el.value.trim() : '';
         };
 
+        // Hàm hỗ trợ chuyển đổi Base64 thành file Blob để gửi chuẩn xác định dạng
+        function dataURLtoBlob(dataurl) {
+            const arr = dataurl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while(n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], {type: mime});
+        }
+
         async function sendEmail(event) {
             event.preventDefault();
             const statusMsg = document.getElementById('status_message');
@@ -531,61 +544,55 @@
             btnText.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> <span>${i18n[currentLang]["msg_sending_btn"]}</span>`;
 
             try {
-                // [NÂNG CẤP] Tự động Upload ảnh - Cơ chế Dự phòng 3 Máy chủ
+                // [NÂNG CẤP] Chuyển đổi Base64 sang dạng File thực tế (Blob) để Upload an toàn
                 let finalQrImageLink = qrBase64;
+                
                 if (qrBase64.startsWith('data:image')) {
                     statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-cloud-upload-alt fa-bounce mr-2"></i> Đang tải ảnh QR lên máy chủ an toàn...</span>`;
                     
-                    const base64Data = qrBase64.split(',')[1];
+                    const imageFile = dataURLtoBlob(qrBase64);
                     let uploadSuccess = false;
 
-                    // Cách 1: ImgBB (Giấu Key trong Body Payload để tránh Adblock nhận dạng URL)
+                    // Cách 1: ImgBB API (Sử dụng File (Blob) sẽ không bị lỗi 400 Bad Request)
                     try {
                         const fd1 = new FormData();
                         fd1.append("key", "e1f7c5e26715f2c4187ef1c05d8f6d6b");
-                        fd1.append("image", base64Data);
+                        fd1.append("image", imageFile, "qrcode.png"); // Đính kèm như một file chuẩn
+                        
                         const r1 = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: fd1 });
                         const d1 = await r1.json();
+                        
                         if(d1.success) {
                             finalQrImageLink = d1.data.url;
                             uploadSuccess = true;
+                        } else {
+                            console.log("ImgBB Rejected", d1);
                         }
-                    } catch(e) { console.log("ImgBB Fallback..."); }
+                    } catch(e) { console.log("ImgBB Fallback...", e); }
 
-                    // Cách 2: Máy chủ dự phòng (FreeImage)
+                    // Cách 2: Imgur API dự phòng (Cũng dùng File)
                     if (!uploadSuccess) {
                         try {
                             const fd2 = new FormData();
-                            fd2.append("key", "6d207e02198a847aa98d0a2a901485a5");
-                            fd2.append("image", base64Data);
-                            const r2 = await fetch("https://freeimage.host/api/1/upload", { method: "POST", body: fd2 });
-                            const d2 = await r2.json();
-                            if(d2.success) {
-                                finalQrImageLink = d2.image.url;
-                                uploadSuccess = true;
-                            }
-                        } catch(e) { console.log("FreeImage Fallback..."); }
-                    }
-
-                    // Cách 3: Máy chủ dự phòng cuối cùng (Imgur API)
-                    if (!uploadSuccess) {
-                        try {
-                            const fd3 = new FormData();
-                            fd3.append("image", base64Data);
-                            const r3 = await fetch("https://api.imgur.com/3/image", {
+                            fd2.append("image", imageFile, "qrcode.png");
+                            
+                            const r2 = await fetch("https://api.imgur.com/3/image", {
                                 method: "POST",
                                 headers: { "Authorization": "Client-ID d36eb1b52a4663e" },
-                                body: fd3
+                                body: fd2
                             });
-                            const d3 = await r3.json();
-                            if(d3.success) {
-                                finalQrImageLink = d3.data.link;
+                            const d2 = await r2.json();
+                            
+                            if(d2.success) {
+                                finalQrImageLink = d2.data.link;
                                 uploadSuccess = true;
+                            } else {
+                                console.log("Imgur Rejected", d2);
                             }
-                        } catch(e) { console.log("Imgur Failed"); }
+                        } catch(e) { console.log("Imgur Failed", e); }
                     }
 
-                    // Nếu cả 3 máy chủ đều bị chặn hoàn toàn
+                    // Báo lỗi nếu tất cả máy chủ ảnh đều bị chặn
                     if (!uploadSuccess) {
                         throw new Error("ERR_IMAGE_UPLOAD"); 
                     }
