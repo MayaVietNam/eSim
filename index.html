@@ -244,7 +244,6 @@
         // =========================================================================
         // CẤU HÌNH BANNER MẶC ĐỊNH (Cố định trong mã nguồn)
         // =========================================================================
-        // Hãy thay thế đường dẫn dưới đây bằng Link ảnh Banner và Link khuyến mãi của bạn
         const DEFAULT_PROMO_BANNER_IMAGE = "https://i.postimg.cc/g2JfchJf/Chat-GPT-Image-Jun-4-2026-03-21-50-PM.png"; 
         const DEFAULT_PROMO_BANNER_LINK = "https://global-ez.com/"; 
         // =========================================================================
@@ -292,7 +291,7 @@
                 "msg_success": "Gửi email thành công cho",
                 "msg_err_sys": "Lỗi hệ thống:",
                 "msg_err_net": "Lỗi mạng không xác định.",
-                "err_img_upload": "Lỗi tải ảnh QR! Vui lòng TẮT TRÌNH CHẶN QUẢNG CÁO (Adblock/Brave Shields) và thử lại.",
+                "err_img_upload": "Trình duyệt chặn tải ảnh! Hãy MỞ TAB ẨN DANH (Incognito) hoặc TẮT Adblock/Brave Shields.",
                 "err_gas_conn": "Lỗi kết nối máy chủ gửi Mail! Vui lòng kiểm tra lại link Apps Script.",
                 "err_gas_parse": "Lỗi quyền truy cập Apps Script! Hãy chắc chắn bạn đã Deploy cấu hình quyền là 'Anyone' (Bất kỳ ai).",
                 "modal_title": "Xác nhận",
@@ -342,7 +341,7 @@
                 "msg_success": "Successfully sent email to",
                 "msg_err_sys": "System Error:",
                 "msg_err_net": "Unknown network error.",
-                "err_img_upload": "QR Upload failed! Please disable your Adblocker/Brave Shields and try again.",
+                "err_img_upload": "Browser blocked image upload! Try using INCOGNITO TAB or disabling Adblock/Brave Shields.",
                 "err_gas_conn": "Mail server connection failed! Check your Apps Script link.",
                 "err_gas_parse": "Permission error! Make sure Apps Script is deployed with 'Anyone' access.",
                 "modal_title": "Confirmation",
@@ -457,7 +456,6 @@
             reader.readAsDataURL(file);
         }
 
-        // Hàm xử lý khi nội dung dán vào là Link Web (từ thẻ HTML hoặc URL)
         function processImageUrl(url) {
             qrBase64 = url; // Lưu trực tiếp URL thay vì Base64
             document.getElementById('qr_preview').src = url;
@@ -533,38 +531,69 @@
             btnText.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> <span>${i18n[currentLang]["msg_sending_btn"]}</span>`;
 
             try {
-                // [MỚI] 1. Tự động Upload ảnh lên ImgBB để lấy Link tĩnh
-                // Đổi sang ImgBB API vì Imgur thường xuyên bị chặn bởi tiện ích chặn quảng cáo
+                // [NÂNG CẤP] Tự động Upload ảnh - Cơ chế Dự phòng 3 Máy chủ
                 let finalQrImageLink = qrBase64;
                 if (qrBase64.startsWith('data:image')) {
-                    statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-cloud-upload-alt fa-bounce mr-2"></i> Đang tải ảnh QR lên máy chủ...</span>`;
+                    statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-cloud-upload-alt fa-bounce mr-2"></i> Đang tải ảnh QR lên máy chủ an toàn...</span>`;
                     
                     const base64Data = qrBase64.split(',')[1];
-                    const imgFormData = new FormData();
-                    imgFormData.append("image", base64Data);
-                    
+                    let uploadSuccess = false;
+
+                    // Cách 1: ImgBB (Giấu Key trong Body Payload để tránh Adblock nhận dạng URL)
                     try {
-                        // Gọi API ImgBB (Thân thiện và ít bị chặn hơn Imgur)
-                        const imgResponse = await fetch("https://api.imgbb.com/1/upload?key=e1f7c5e26715f2c4187ef1c05d8f6d6b", {
-                            method: "POST",
-                            body: imgFormData
-                        });
-                        
-                        const imgData = await imgResponse.json();
-                        if(imgData.success) {
-                            finalQrImageLink = imgData.data.url; // Trả về Link chuẩn: https://i.ibb.co/...
-                        } else {
-                            throw new Error("ImgBB API Rejected");
+                        const fd1 = new FormData();
+                        fd1.append("key", "e1f7c5e26715f2c4187ef1c05d8f6d6b");
+                        fd1.append("image", base64Data);
+                        const r1 = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: fd1 });
+                        const d1 = await r1.json();
+                        if(d1.success) {
+                            finalQrImageLink = d1.data.url;
+                            uploadSuccess = true;
                         }
-                    } catch (uploadErr) {
-                        console.error("Lỗi Upload Ảnh:", uploadErr);
-                        throw new Error("ERR_IMAGE_UPLOAD"); // Ném ra cờ lỗi để bắt ở phía dưới
+                    } catch(e) { console.log("ImgBB Fallback..."); }
+
+                    // Cách 2: Máy chủ dự phòng (FreeImage)
+                    if (!uploadSuccess) {
+                        try {
+                            const fd2 = new FormData();
+                            fd2.append("key", "6d207e02198a847aa98d0a2a901485a5");
+                            fd2.append("image", base64Data);
+                            const r2 = await fetch("https://freeimage.host/api/1/upload", { method: "POST", body: fd2 });
+                            const d2 = await r2.json();
+                            if(d2.success) {
+                                finalQrImageLink = d2.image.url;
+                                uploadSuccess = true;
+                            }
+                        } catch(e) { console.log("FreeImage Fallback..."); }
+                    }
+
+                    // Cách 3: Máy chủ dự phòng cuối cùng (Imgur API)
+                    if (!uploadSuccess) {
+                        try {
+                            const fd3 = new FormData();
+                            fd3.append("image", base64Data);
+                            const r3 = await fetch("https://api.imgur.com/3/image", {
+                                method: "POST",
+                                headers: { "Authorization": "Client-ID d36eb1b52a4663e" },
+                                body: fd3
+                            });
+                            const d3 = await r3.json();
+                            if(d3.success) {
+                                finalQrImageLink = d3.data.link;
+                                uploadSuccess = true;
+                            }
+                        } catch(e) { console.log("Imgur Failed"); }
+                    }
+
+                    // Nếu cả 3 máy chủ đều bị chặn hoàn toàn
+                    if (!uploadSuccess) {
+                        throw new Error("ERR_IMAGE_UPLOAD"); 
                     }
                 }
 
                 statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-spinner fa-spin mr-2"></i> ${i18n[currentLang]["msg_sending"]}</span>`;
 
-                // 2. Lắp ráp dữ liệu chuẩn bị gửi đi
+                // Lắp ráp dữ liệu chuẩn bị gửi đi
                 const formData = {
                     sheet_url: SHEET_URL.trim(), 
                     email_language: getVal('email_language'),
@@ -582,7 +611,7 @@
                     promo_banner_link: DEFAULT_PROMO_BANNER_LINK
                 };
 
-                // 3. Gửi sang Google Apps Script
+                // Gửi sang Google Apps Script
                 let response;
                 try {
                     response = await fetch(GAS_URL, {
@@ -597,7 +626,7 @@
                     throw new Error("ERR_GAS_CONNECT");
                 }
 
-                // 4. Phân tích kết quả từ GAS
+                // Phân tích kết quả từ GAS
                 let result;
                 try {
                     result = await response.json();
