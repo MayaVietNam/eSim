@@ -288,10 +288,13 @@
                 "btn_submit": "Gửi Email Ngay",
                 "msg_sending_btn": "Đang xử lý...",
                 "msg_error_gas": "LỖI: Cần dán Link Apps Script.",
-                "msg_sending": "Đang kết nối tới máy chủ gửi mail...",
+                "msg_sending": "Đang gửi tín hiệu tới máy chủ Mail...",
                 "msg_success": "Gửi email thành công cho",
                 "msg_err_sys": "Lỗi hệ thống:",
-                "msg_err_net": "Lỗi mạng hoặc Link Apps Script bị sai.",
+                "msg_err_net": "Lỗi mạng không xác định.",
+                "err_img_upload": "Lỗi tải ảnh QR! Vui lòng TẮT TRÌNH CHẶN QUẢNG CÁO (Adblock/Brave Shields) và thử lại.",
+                "err_gas_conn": "Lỗi kết nối máy chủ gửi Mail! Vui lòng kiểm tra lại link Apps Script.",
+                "err_gas_parse": "Lỗi quyền truy cập Apps Script! Hãy chắc chắn bạn đã Deploy cấu hình quyền là 'Anyone' (Bất kỳ ai).",
                 "modal_title": "Xác nhận",
                 "confirm_clear": "Bạn có chắc muốn xóa sạch thông tin đang điền?",
                 "btn_cancel": "Hủy",
@@ -338,7 +341,10 @@
                 "msg_sending": "Connecting to mail server...",
                 "msg_success": "Successfully sent email to",
                 "msg_err_sys": "System Error:",
-                "msg_err_net": "Network Error or invalid Apps Script link.",
+                "msg_err_net": "Unknown network error.",
+                "err_img_upload": "QR Upload failed! Please disable your Adblocker/Brave Shields and try again.",
+                "err_gas_conn": "Mail server connection failed! Check your Apps Script link.",
+                "err_gas_parse": "Permission error! Make sure Apps Script is deployed with 'Anyone' access.",
                 "modal_title": "Confirmation",
                 "confirm_clear": "Are you sure you want to clear the form?",
                 "btn_cancel": "Cancel",
@@ -527,29 +533,32 @@
             btnText.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> <span>${i18n[currentLang]["msg_sending_btn"]}</span>`;
 
             try {
-                // [MỚI] 1. Tự động Upload ảnh lên Imgur để lấy Link tĩnh (Tránh lỗi hiển thị ảnh trong Email)
+                // [MỚI] 1. Tự động Upload ảnh lên ImgBB để lấy Link tĩnh
+                // Đổi sang ImgBB API vì Imgur thường xuyên bị chặn bởi tiện ích chặn quảng cáo
                 let finalQrImageLink = qrBase64;
                 if (qrBase64.startsWith('data:image')) {
-                    statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-cloud-upload-alt fa-bounce mr-2"></i> Đang xử lý ảnh QR lên Cloud...</span>`;
+                    statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-cloud-upload-alt fa-bounce mr-2"></i> Đang tải ảnh QR lên máy chủ...</span>`;
                     
                     const base64Data = qrBase64.split(',')[1];
                     const imgFormData = new FormData();
                     imgFormData.append("image", base64Data);
                     
-                    // Gọi API Imgur
-                    const imgResponse = await fetch("https://api.imgur.com/3/image", {
-                        method: "POST",
-                        headers: {
-                            "Authorization": "Client-ID d36eb1b52a4663e" // Public Client ID dùng cho Upload ẩn danh
-                        },
-                        body: imgFormData
-                    });
-                    
-                    const imgData = await imgResponse.json();
-                    if(imgData.success) {
-                        finalQrImageLink = imgData.data.link; // Trả về Link chuẩn: https://i.imgur.com/...
-                    } else {
-                        throw new Error("Lỗi tải ảnh QR. Vui lòng thử lại.");
+                    try {
+                        // Gọi API ImgBB (Thân thiện và ít bị chặn hơn Imgur)
+                        const imgResponse = await fetch("https://api.imgbb.com/1/upload?key=e1f7c5e26715f2c4187ef1c05d8f6d6b", {
+                            method: "POST",
+                            body: imgFormData
+                        });
+                        
+                        const imgData = await imgResponse.json();
+                        if(imgData.success) {
+                            finalQrImageLink = imgData.data.url; // Trả về Link chuẩn: https://i.ibb.co/...
+                        } else {
+                            throw new Error("ImgBB API Rejected");
+                        }
+                    } catch (uploadErr) {
+                        console.error("Lỗi Upload Ảnh:", uploadErr);
+                        throw new Error("ERR_IMAGE_UPLOAD"); // Ném ra cờ lỗi để bắt ở phía dưới
                     }
                 }
 
@@ -566,7 +575,7 @@
                     package_type: getVal('package_type') || '-',
                     check_data_link: getVal('check_data_link'),
                     iccid: getVal('iccid'),
-                    qr_code_image: finalQrImageLink, // Chuyển từ truyền Base64 sang truyền Link URL tĩnh
+                    qr_code_image: finalQrImageLink, 
                     ios_link: getVal('ios_link') || '#',
                     android_lpa: getVal('android_lpa') || '#',
                     promo_banner_image: DEFAULT_PROMO_BANNER_IMAGE,
@@ -574,15 +583,28 @@
                 };
 
                 // 3. Gửi sang Google Apps Script
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8',
-                    },
-                    body: JSON.stringify(formData)
-                });
+                let response;
+                try {
+                    response = await fetch(GAS_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+                } catch (gasErr) {
+                    console.error("Lỗi kết nối tới GAS:", gasErr);
+                    throw new Error("ERR_GAS_CONNECT");
+                }
 
-                const result = await response.json();
+                // 4. Phân tích kết quả từ GAS
+                let result;
+                try {
+                    result = await response.json();
+                } catch (parseErr) {
+                    console.error("Lỗi phân tích JSON từ GAS (Có thể do sai quyền truy cập):", parseErr);
+                    throw new Error("ERR_GAS_PARSE");
+                }
 
                 if(result.status === 'success') {
                     statusMsg.innerHTML = `<span class="text-emerald-700 font-bold flex items-center bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200"><i class="fas fa-check-circle mr-2 text-emerald-500"></i> ${i18n[currentLang]["msg_success"]} ${formData.customer_email}!</span>`;
@@ -591,8 +613,18 @@
                 }
 
             } catch (error) {
-                console.error("Lỗi:", error);
-                statusMsg.innerHTML = `<span class="text-red-600 font-bold flex items-center bg-red-50 px-3 py-2 rounded-lg border border-red-200"><i class="fas fa-wifi mr-2 text-red-500"></i> ${i18n[currentLang]["msg_err_net"]}</span>`;
+                // HỆ THỐNG BẮT LỖI VÀ CHẨN ĐOÁN LÝ DO CHÍNH XÁC
+                let errorDetails = i18n[currentLang]["msg_err_net"];
+                
+                if (error.message === "ERR_IMAGE_UPLOAD") {
+                    errorDetails = i18n[currentLang]["err_img_upload"];
+                } else if (error.message === "ERR_GAS_CONNECT") {
+                    errorDetails = i18n[currentLang]["err_gas_conn"];
+                } else if (error.message === "ERR_GAS_PARSE") {
+                    errorDetails = i18n[currentLang]["err_gas_parse"];
+                }
+
+                statusMsg.innerHTML = `<span class="text-red-600 font-bold flex items-center bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-sm"><i class="fas fa-wifi mr-2 text-red-500"></i> ${errorDetails}</span>`;
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('opacity-75', 'cursor-not-allowed', 'scale-[0.98]');
