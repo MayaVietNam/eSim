@@ -353,7 +353,9 @@
         };
 
         let currentLang = 'vi';
-        let qrBase64 = "";
+        
+        // [MỚI] Biến chứa File thật sự (chứ không phải Base64 chữ lộn xộn nữa)
+        let qrUploadData = null; 
 
         // --- Language Toggle Logic ---
         function setLang(lang) {
@@ -380,61 +382,32 @@
             document.getElementById('btnText').innerHTML = `<i class="fas fa-paper-plane mr-2"></i> <span data-i18n="btn_submit">${i18n[lang]["btn_submit"]}</span>`;
         }
 
-        // --- QR Code Upload / Paste Logic ---
-        
-        // HÀM CHUẨN HÓA ẢNH (ÉP THÀNH JPEG ĐỂ KHÔNG BAO GIỜ BỊ LỖI API 400)
-        function normalizeImageAndSave(imgSource) {
-            const img = new Image();
-            img.crossOrigin = "Anonymous"; // Giúp xử lý các ảnh có nguồn gốc chéo
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                
-                // Đổ nền trắng (Khắc phục lỗi viền đen của WebP/PNG trong suốt)
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
-                
-                // Ép xuất ra định dạng JPEG chuẩn xác nhất
-                qrBase64 = canvas.toDataURL('image/jpeg', 0.9);
-                
-                document.getElementById('qr_preview').src = qrBase64;
-                document.getElementById('qr_preview_container').classList.remove('hidden');
-                document.getElementById('qr_placeholder').classList.add('hidden');
-            };
-            img.src = imgSource;
-        }
-
-        function processImage(file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                normalizeImageAndSave(event.target.result);
-            };
-            reader.readAsDataURL(file);
+        // --- HỆ THỐNG XỬ LÝ ẢNH MỚI (Bằng File NGUYÊN BẢN) ---
+        function processImageFile(file) {
+            qrUploadData = file; // Lưu trực tiếp File, không convert gì cả
+            
+            // Hiển thị xem trước ảnh ngay lập tức
+            const objectUrl = URL.createObjectURL(file);
+            document.getElementById('qr_preview').src = objectUrl;
+            document.getElementById('qr_preview_container').classList.remove('hidden');
+            document.getElementById('qr_placeholder').classList.add('hidden');
         }
 
         function processImageUrl(url) {
-            if (url.startsWith('data:image')) {
-                // Nếu copy mã Base64 rác, chuẩn hóa lại
-                normalizeImageAndSave(url);
-            } else {
-                // Nếu là Link Web, lưu trực tiếp
-                qrBase64 = url; 
-                document.getElementById('qr_preview').src = url;
-                document.getElementById('qr_preview_container').classList.remove('hidden');
-                document.getElementById('qr_placeholder').classList.add('hidden');
-            }
+            qrUploadData = url; // Lưu trực tiếp URL
+            document.getElementById('qr_preview').src = url;
+            document.getElementById('qr_preview_container').classList.remove('hidden');
+            document.getElementById('qr_placeholder').classList.add('hidden');
         }
 
+        // 1. Khi bấm chọn file từ máy tính
         document.getElementById('qr_file_input').addEventListener('change', function(e) {
             if (e.target.files && e.target.files[0]) {
-                processImage(e.target.files[0]);
+                processImageFile(e.target.files[0]);
             }
         });
 
-        // Xử lý sự kiện Dán (Paste)
+        // 2. Khi Copy/Dán ảnh
         document.addEventListener('paste', (e) => {
             const clipboardData = e.clipboardData || window.clipboardData;
             if (!clipboardData) return;
@@ -442,8 +415,8 @@
             
             for (let i = 0; i < items.length; i++) {
                 if (items[i].type.indexOf('image') !== -1) {
-                    const blob = items[i].getAsFile();
-                    processImage(blob);
+                    const blobFile = items[i].getAsFile();
+                    processImageFile(blobFile);
                     e.preventDefault();
                     return;
                 }
@@ -469,6 +442,7 @@
             }
         });
 
+        // 3. Kéo thả ảnh
         const dropzone = document.getElementById('qr_dropzone');
         dropzone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -482,11 +456,11 @@
             e.preventDefault();
             dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/50');
             if (e.dataTransfer.files && e.dataTransfer.files[0] && e.dataTransfer.files[0].type.startsWith('image/')) {
-                processImage(e.dataTransfer.files[0]);
+                processImageFile(e.dataTransfer.files[0]);
             }
         });
 
-        // --- Clear Form Logic ---
+        // --- Xóa Form ---
         const modal = document.getElementById('confirmModal');
         const modalCard = document.getElementById('modalCard');
 
@@ -515,7 +489,7 @@
                 if(el) el.value = '';
             });
             
-            qrBase64 = "";
+            qrUploadData = null;
             document.getElementById('qr_file_input').value = "";
             document.getElementById('qr_preview').src = "";
             document.getElementById('qr_preview_container').classList.add('hidden');
@@ -530,7 +504,7 @@
             return el ? el.value.trim() : '';
         };
 
-        // --- Submit Logic ---
+        // --- Nút Gửi Logic ---
         async function sendEmail(event) {
             event.preventDefault();
             const statusMsg = document.getElementById('status_message');
@@ -540,7 +514,7 @@
                 return;
             }
 
-            if(!qrBase64) {
+            if(!qrUploadData) {
                 statusMsg.innerHTML = `<span class="text-amber-600 font-bold bg-amber-50 px-3 py-2 rounded-lg border border-amber-100 block"><i class="fas fa-exclamation-circle mr-1.5"></i> ${i18n[currentLang]["err_qr_missing"]}</span>`;
                 return;
             }
@@ -553,81 +527,75 @@
             btnText.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> <span>${i18n[currentLang]["msg_sending_btn"]}</span>`;
 
             try {
-                // Tự động Upload ảnh - Đã đổi sang URLSearchParams cực kỳ an toàn
-                let finalQrImageLink = qrBase64;
+                let finalQrImageLink = "";
+                let uploadSuccess = false;
                 
-                if (qrBase64.startsWith('data:image')) {
-                    statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-cloud-upload-alt fa-bounce mr-2"></i> Đang tải ảnh QR lên máy chủ an toàn...</span>`;
+                // Nếu người dùng dán 1 Link có sẵn (Không phải dạng base64)
+                if (typeof qrUploadData === 'string' && qrUploadData.startsWith('http')) {
+                    finalQrImageLink = qrUploadData;
+                    uploadSuccess = true;
+                } else {
+                    // Nếu là File thật tải lên, dùng form-data gửi nguyên bản!
+                    statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-cloud-upload-alt fa-bounce mr-2"></i> Đang tải file ảnh lên máy chủ an toàn...</span>`;
                     
-                    const base64Data = qrBase64.split(',')[1];
-                    let uploadSuccess = false;
-
-                    // Cách 1: ImgBB API (Cấu trúc mới URLSearchParams chống lỗi)
-                    if (!uploadSuccess) {
-                        try {
-                            const params = new URLSearchParams();
-                            params.append("key", "e1f7c5e26715f2c4187ef1c05d8f6d6b");
-                            params.append("image", base64Data);
-                            
-                            const r1 = await fetch("https://api.imgbb.com/1/upload", { 
-                                method: "POST", 
-                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                                body: params 
-                            });
-                            const d1 = await r1.json();
-                            if(d1.success) {
-                                finalQrImageLink = d1.data.url;
-                                uploadSuccess = true;
-                            }
-                        } catch(e) { console.log("ImgBB 1 Failed", e); }
+                    // Chuẩn hóa payload
+                    let payloadData = qrUploadData;
+                    let isBase64 = false;
+                    let isUrl = false;
+                    
+                    if (typeof qrUploadData === 'string') {
+                        if (qrUploadData.startsWith('data:image')) {
+                            payloadData = qrUploadData.split(',')[1];
+                            isBase64 = true;
+                        } else {
+                            isUrl = true;
+                        }
                     }
 
-                    // Cách 2: ImgBB Dự Phòng với Key thứ 2
+                    // Cách 1: Gửi thẳng file qua ImgBB
+                    try {
+                        const fd1 = new FormData();
+                        fd1.append("key", "e1f7c5e26715f2c4187ef1c05d8f6d6b");
+                        fd1.append("image", payloadData); // Truyền File nguyên bản vào đây
+                        
+                        const r1 = await fetch("https://api.imgbb.com/1/upload", { 
+                            method: "POST", 
+                            body: fd1 // KHÔNG chèn Content-Type thủ công. Trình duyệt sẽ tự lo!
+                        });
+                        const d1 = await r1.json();
+                        
+                        if(d1.success) {
+                            finalQrImageLink = d1.data.url;
+                            uploadSuccess = true;
+                        }
+                    } catch(e) { console.log("ImgBB 1 Failed", e); }
+
+                    // Cách 2: Imgur Dự phòng (Nếu ImgBB nghẽn mạng)
                     if (!uploadSuccess) {
                         try {
-                            const params2 = new URLSearchParams();
-                            params2.append("key", "3270921c2386299d63c5d8869a239962");
-                            params2.append("image", base64Data);
+                            const fd2 = new FormData();
+                            fd2.append("image", payloadData);
                             
-                            const r2 = await fetch("https://api.imgbb.com/1/upload", { 
-                                method: "POST", 
-                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                                body: params2 
+                            if (isBase64) fd2.append("type", "base64");
+                            else if (isUrl) fd2.append("type", "url");
+                            
+                            const r2 = await fetch("https://api.imgur.com/3/image", {
+                                method: "POST",
+                                headers: { "Authorization": "Client-ID d36eb1b52a4663e" },
+                                body: fd2
                             });
                             const d2 = await r2.json();
-                            if(d2.success) {
-                                finalQrImageLink = d2.data.url;
-                                uploadSuccess = true;
-                            }
-                        } catch(e) { console.log("ImgBB 2 Failed", e); }
-                    }
-
-                    // Cách 3: Imgur API
-                    if (!uploadSuccess) {
-                        try {
-                            const params3 = new URLSearchParams();
-                            params3.append("image", base64Data);
-                            params3.append("type", "base64");
                             
-                            const r3 = await fetch("https://api.imgur.com/3/image", {
-                                method: "POST",
-                                headers: { 
-                                    "Authorization": "Client-ID d36eb1b52a4663e",
-                                    "Content-Type": "application/x-www-form-urlencoded"
-                                },
-                                body: params3
-                            });
-                            const d3 = await r3.json();
-                            if(d3.success) {
-                                finalQrImageLink = d3.data.link;
+                            if(d2.success) {
+                                finalQrImageLink = d2.data.link;
                                 uploadSuccess = true;
                             }
                         } catch(e) { console.log("Imgur Failed", e); }
                     }
+                }
 
-                    if (!uploadSuccess) {
-                        throw new Error("ERR_IMAGE_UPLOAD"); 
-                    }
+                if (!uploadSuccess) {
+                    throw new Error("ERR_IMAGE_UPLOAD"); 
                 }
 
                 statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-spinner fa-spin mr-2"></i> ${i18n[currentLang]["msg_sending"]}</span>`;
