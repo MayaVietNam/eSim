@@ -385,14 +385,41 @@
             }
         });
 
+        // Xử lý sự kiện Dán (Paste) linh hoạt cho mọi nguồn copy
         document.addEventListener('paste', (e) => {
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            for (let index in items) {
-                const item = items[index];
-                if (item.kind === 'file' && item.type.startsWith('image/')) {
-                    const blob = item.getAsFile();
+            const clipboardData = e.clipboardData || window.clipboardData;
+            if (!clipboardData) return;
+
+            const items = clipboardData.items;
+            
+            // Trường hợp 1: Dán File ảnh (Chụp màn hình hoặc Copy Image tiêu chuẩn)
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
                     processImage(blob);
+                    e.preventDefault();
+                    return;
                 }
+            }
+
+            // Trường hợp 2: Dán URL ảnh hoặc thẻ HTML chứa ảnh (Copy từ trang web)
+            const html = clipboardData.getData('text/html');
+            const text = clipboardData.getData('text/plain');
+
+            if (html) {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const img = doc.querySelector('img');
+                if (img && img.src) {
+                    processImageUrl(img.src);
+                    e.preventDefault();
+                    return;
+                }
+            }
+
+            if (text && text.match(/^https?:\/\/.+/i)) {
+                processImageUrl(text);
+                e.preventDefault();
+                return;
             }
         });
 
@@ -424,6 +451,13 @@
             reader.readAsDataURL(file);
         }
 
+        // Hàm xử lý khi nội dung dán vào là Link Web (từ thẻ HTML hoặc URL)
+        function processImageUrl(url) {
+            qrBase64 = url; // Lưu trực tiếp URL thay vì Base64
+            document.getElementById('qr_preview').src = url;
+            document.getElementById('qr_preview_container').classList.remove('hidden');
+            document.getElementById('qr_placeholder').classList.add('hidden');
+        }
 
         // --- Clear Form Logic ---
         const modal = document.getElementById('confirmModal');
@@ -485,33 +519,61 @@
                 return;
             }
 
-            const formData = {
-                sheet_url: SHEET_URL.trim(), 
-                email_language: getVal('email_language'),
-                customer_email: getVal('customer_email'),
-                customer_name: getVal('customer_name'),
-                order_number: getVal('order_number'),
-                package_name: getVal('package_name') || '-',
-                package_type: getVal('package_type') || '-',
-                check_data_link: getVal('check_data_link'),
-                iccid: getVal('iccid'),
-                qr_code_image: qrBase64, // Truyền trực tiếp chuỗi Base64
-                ios_link: getVal('ios_link') || '#',
-                android_lpa: getVal('android_lpa') || '#',
-                promo_banner_image: DEFAULT_PROMO_BANNER_IMAGE,
-                promo_banner_link: DEFAULT_PROMO_BANNER_LINK
-            };
-
             const btn = document.getElementById('submitBtn');
             const btnText = document.getElementById('btnText');
 
             btn.disabled = true;
             btn.classList.add('opacity-75', 'cursor-not-allowed', 'scale-[0.98]');
             btnText.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> <span>${i18n[currentLang]["msg_sending_btn"]}</span>`;
-            
-            statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-spinner fa-spin mr-2"></i> ${i18n[currentLang]["msg_sending"]}</span>`;
 
             try {
+                // [MỚI] 1. Tự động Upload ảnh lên Imgur để lấy Link tĩnh (Tránh lỗi hiển thị ảnh trong Email)
+                let finalQrImageLink = qrBase64;
+                if (qrBase64.startsWith('data:image')) {
+                    statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-cloud-upload-alt fa-bounce mr-2"></i> Đang xử lý ảnh QR lên Cloud...</span>`;
+                    
+                    const base64Data = qrBase64.split(',')[1];
+                    const imgFormData = new FormData();
+                    imgFormData.append("image", base64Data);
+                    
+                    // Gọi API Imgur
+                    const imgResponse = await fetch("https://api.imgur.com/3/image", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": "Client-ID d36eb1b52a4663e" // Public Client ID dùng cho Upload ẩn danh
+                        },
+                        body: imgFormData
+                    });
+                    
+                    const imgData = await imgResponse.json();
+                    if(imgData.success) {
+                        finalQrImageLink = imgData.data.link; // Trả về Link chuẩn: https://i.imgur.com/...
+                    } else {
+                        throw new Error("Lỗi tải ảnh QR. Vui lòng thử lại.");
+                    }
+                }
+
+                statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-spinner fa-spin mr-2"></i> ${i18n[currentLang]["msg_sending"]}</span>`;
+
+                // 2. Lắp ráp dữ liệu chuẩn bị gửi đi
+                const formData = {
+                    sheet_url: SHEET_URL.trim(), 
+                    email_language: getVal('email_language'),
+                    customer_email: getVal('customer_email'),
+                    customer_name: getVal('customer_name'),
+                    order_number: getVal('order_number'),
+                    package_name: getVal('package_name') || '-',
+                    package_type: getVal('package_type') || '-',
+                    check_data_link: getVal('check_data_link'),
+                    iccid: getVal('iccid'),
+                    qr_code_image: finalQrImageLink, // Chuyển từ truyền Base64 sang truyền Link URL tĩnh
+                    ios_link: getVal('ios_link') || '#',
+                    android_lpa: getVal('android_lpa') || '#',
+                    promo_banner_image: DEFAULT_PROMO_BANNER_IMAGE,
+                    promo_banner_link: DEFAULT_PROMO_BANNER_LINK
+                };
+
+                // 3. Gửi sang Google Apps Script
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: {
