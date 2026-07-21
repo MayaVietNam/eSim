@@ -170,18 +170,12 @@
                                     </div>
                                 </div>
 
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-1.5" data-i18n="lbl_ios">Link cài đặt iOS</label>
-                                        <input type="text" id="ios_link" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm" data-i18n-placeholder="ph_ios" placeholder="https://... (nếu có)">
-                                    </div>
-                                    <div>
-                                        <div class="flex items-end justify-between mb-1.5">
-                                            <label class="block text-sm font-semibold text-slate-700" data-i18n="lbl_android">Link Android (hoặc LPA)</label>
-                                        </div>
-                                        <input type="text" id="android_lpa" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm" data-i18n-placeholder="ph_android" placeholder="LPA:1$... hoặc https://...">
-                                        <p class="text-xs text-slate-500 mt-1.5" data-i18n="desc_android"><i class="fas fa-info-circle mr-1"></i> Hệ thống sẽ tự đổi mã LPA thành Link.</p>
-                                    </div>
+                                <div class="pt-4 border-t border-indigo-100/60 mt-5">
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                        <span data-i18n="lbl_single_lpa">Mã LPA (LPA:1$...)</span>
+                                    </label>
+                                    <input type="text" id="single_lpa_input" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm" data-i18n-placeholder="ph_single_lpa" placeholder="LPA:1$...">
+                                    <p class="text-xs text-indigo-600 font-medium mt-1.5" data-i18n="desc_single_lpa"><i class="fas fa-magic mr-1"></i> Tự động tạo Link cài nhanh cho cả iOS và Android.</p>
                                 </div>
                             </div>
                         </div>
@@ -266,11 +260,9 @@
                 "qr_prompt": "Nhấn Ctrl+V để dán ảnh hoặc Click",
                 "qr_sub_prompt": "Hỗ trợ định dạng JPG, PNG",
                 "qr_change": "Đổi ảnh khác",
-                "lbl_ios": "Link cài đặt iOS",
-                "ph_ios": "https://... (nếu có)",
-                "lbl_android": "Link Android (hoặc LPA)",
-                "desc_android": "Hệ thống sẽ tự đổi mã LPA thành Link.",
-                "ph_android": "LPA:1$... hoặc https://...",
+                "lbl_single_lpa": "Mã LPA (LPA:1$...)",
+                "ph_single_lpa": "LPA:1$...",
+                "desc_single_lpa": "Tự động tạo Link cài nhanh cho cả iOS và Android.",
                 "btn_submit": "Gửi Email Ngay",
                 "msg_sending_btn": "Đang xử lý...",
                 "msg_error_gas": "LỖI: Cần dán Link Apps Script.",
@@ -315,11 +307,9 @@
                 "qr_prompt": "Press Ctrl+V to paste or Click",
                 "qr_sub_prompt": "Supports JPG, PNG formats",
                 "qr_change": "Change Image",
-                "lbl_ios": "iOS Install Link",
-                "ph_ios": "https://... (if any)",
-                "lbl_android": "Android Link (or LPA)",
-                "desc_android": "System auto-converts LPA to Link.",
-                "ph_android": "LPA:1$... or https://...",
+                "lbl_single_lpa": "LPA Code (LPA:1$...)",
+                "ph_single_lpa": "LPA:1$...",
+                "desc_single_lpa": "Auto-generates quick install links for both iOS and Android.",
                 "btn_submit": "Send Email Now",
                 "msg_sending_btn": "Processing...",
                 "msg_error_gas": "ERROR: Apps Script Link is required.",
@@ -523,7 +513,7 @@
         }
 
         function executeClear() {
-            const fields = ['customer_email', 'customer_name', 'order_number', 'package_name', 'package_type', 'check_data_link', 'iccid', 'ios_link', 'android_lpa'];
+            const fields = ['customer_email', 'customer_name', 'order_number', 'package_name', 'package_type', 'check_data_link', 'iccid', 'single_lpa_input'];
             fields.forEach(field => {
                 const el = document.getElementById(field);
                 if(el) el.value = '';
@@ -569,6 +559,36 @@
             try {
                 statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-spinner fa-spin mr-2"></i> ${i18n[currentLang]["msg_sending"]}</span>`;
 
+                // --- LOGIC XỬ LÝ MÃ LPA ---
+                let final_ios_link = '#';
+                let final_android_lpa = '#';
+                
+                let rawLpa = getVal('single_lpa_input').replace(/\s/g, ''); // Xóa hết dấu cách thừa
+                
+                if (rawLpa) {
+                    if (rawLpa.startsWith('http')) {
+                        // Nếu user cố tình dán thẳng một cái link http, xài luôn cho cả 2
+                        final_ios_link = rawLpa;
+                        final_android_lpa = rawLpa; 
+                    } else {
+                        // Bổ sung tự động tiền tố LPA nếu user quên (nhà mạng hay gửi mã 1$...)
+                        if (rawLpa.startsWith('1$')) {
+                            rawLpa = 'LPA:' + rawLpa;
+                        }
+                        
+                        // Nếu đúng chuẩn LPA:1$
+                        if (rawLpa.startsWith('LPA:1$')) {
+                            final_ios_link = 'https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=' + rawLpa;
+                            final_android_lpa = 'https://esimsetup.android.com/esim_qrcode_provisioning?carddata=' + rawLpa; // Đã thêm tự động link Android
+                        } else {
+                            // Trường hợp dị tật (Không bắt đầu bằng web, không bắt đầu bằng LPA)
+                            final_ios_link = rawLpa;
+                            final_android_lpa = rawLpa;
+                        }
+                    }
+                }
+                // -------------------------
+
                 const formData = {
                     sheet_url: SHEET_URL.trim(), 
                     email_language: getVal('email_language'),
@@ -580,8 +600,8 @@
                     check_data_link: getVal('check_data_link'),
                     iccid: getVal('iccid'),
                     qr_code_image: qrUploadData, // Gửi nguyên cục Base64 đã nén cực nhẹ lên Apps Script
-                    ios_link: getVal('ios_link') || '#',
-                    android_lpa: getVal('android_lpa') || '#',
+                    ios_link: final_ios_link,     // Đã tự sinh ra link Apple
+                    android_lpa: final_android_lpa, // Chứa chuẩn mã LPA cho android
                     promo_banner_image: DEFAULT_PROMO_BANNER_IMAGE,
                     promo_banner_link: DEFAULT_PROMO_BANNER_LINK
                 };
