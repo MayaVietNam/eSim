@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- THÊM THƯ VIỆN TẠO QR CODE TRỰC TIẾP TRÊN TRÌNH DUYỆT -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
@@ -145,7 +147,15 @@
                                     <input type="text" id="iccid" required class="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm shadow-sm text-slate-800" data-i18n-placeholder="ph_iccid" placeholder="89852...">
                                 </div>
 
-                                <div class="mb-5">
+                                <div class="pt-4 mt-5 mb-5">
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                        <span data-i18n="lbl_single_lpa">Mã LPA (LPA:1$...)</span>
+                                    </label>
+                                    <input type="text" id="single_lpa_input" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm" data-i18n-placeholder="ph_single_lpa" placeholder="LPA:1$...">
+                                    <p class="text-xs text-indigo-600 font-medium mt-1.5" data-i18n="desc_single_lpa"><i class="fas fa-magic mr-1"></i> Nhập LPA vào đây, hệ thống sẽ tự sinh QR Code bên dưới.</p>
+                                </div>
+
+                                <div>
                                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">
                                         <span data-i18n="lbl_qr">Ảnh QR Code</span> <span class="text-red-500">*</span>
                                     </label>
@@ -157,7 +167,7 @@
                                             <div class="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-3 group-hover:scale-110 transition-transform">
                                                 <i class="fas fa-qrcode text-xl"></i>
                                             </div>
-                                            <p class="text-sm font-semibold text-slate-600 mb-1" data-i18n="qr_prompt">Nhấn Ctrl+V để dán ảnh hoặc Click</p>
+                                            <p class="text-sm font-semibold text-slate-600 mb-1" data-i18n="qr_prompt">Nhập mã LPA ở trên, hoặc dán ảnh vào đây</p>
                                             <p class="text-xs text-slate-400" data-i18n="qr_sub_prompt">Hỗ trợ định dạng JPG, PNG</p>
                                         </div>
 
@@ -168,14 +178,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                <div class="pt-4 border-t border-indigo-100/60 mt-5">
-                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                        <span data-i18n="lbl_single_lpa">Mã LPA (LPA:1$...)</span>
-                                    </label>
-                                    <input type="text" id="single_lpa_input" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm" data-i18n-placeholder="ph_single_lpa" placeholder="LPA:1$...">
-                                    <p class="text-xs text-indigo-600 font-medium mt-1.5" data-i18n="desc_single_lpa"><i class="fas fa-magic mr-1"></i> Tự động tạo Link cài nhanh cho cả iOS và Android.</p>
                                 </div>
                             </div>
                         </div>
@@ -216,18 +218,10 @@
         // CẤU HÌNH HỆ THỐNG
         // =========================================================================
         
-        // Link Apps Script
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwA6FwKH9eQzzfzmnu5r7I_5XrJ19bhhAnew2H_qOg8Yiw9Q4Wou-f-fyYQwpT54T6o/exec"; 
-        
-        // Link Google Sheet
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/18XtBhNZW8J9CAL-L_XMUcIEYiX4_l0wR8br5Pi-cKoY/edit?gid=0#gid=0"; 
-
-        // =========================================================================
-        // CẤU HÌNH BANNER MẶC ĐỊNH (Cố định trong mã nguồn)
-        // =========================================================================
         const DEFAULT_PROMO_BANNER_IMAGE = "https://cdn.phototourl.com/free/2026-08-06-21cf3c46-0a2b-4e5d-856d-48c8d30d9d13.png"; 
         const DEFAULT_PROMO_BANNER_LINK = "https://global-ez.com/"; 
-        // =========================================================================
 
         // --- I18N Dictionaries ---
         const i18n = {
@@ -257,12 +251,12 @@
                 "lbl_iccid": "Mã số ICCID",
                 "ph_iccid": "89852...",
                 "lbl_qr": "Ảnh QR Code",
-                "qr_prompt": "Nhấn Ctrl+V để dán ảnh hoặc Click",
+                "qr_prompt": "Nhập mã LPA ở trên, hoặc dán ảnh vào đây",
                 "qr_sub_prompt": "Hỗ trợ định dạng JPG, PNG",
                 "qr_change": "Đổi ảnh khác",
                 "lbl_single_lpa": "Mã LPA (LPA:1$...)",
                 "ph_single_lpa": "LPA:1$...",
-                "desc_single_lpa": "Tự động tạo Link cài nhanh cho cả iOS và Android.",
+                "desc_single_lpa": "Nhập LPA vào đây, hệ thống sẽ tự sinh QR Code bên dưới.",
                 "btn_submit": "Gửi Email Ngay",
                 "msg_sending_btn": "Đang xử lý...",
                 "msg_error_gas": "LỖI: Cần dán Link Apps Script.",
@@ -276,7 +270,7 @@
                 "confirm_clear": "Bạn có chắc muốn xóa sạch thông tin đang điền?",
                 "btn_cancel": "Hủy",
                 "btn_confirm": "Đồng ý làm mới",
-                "err_qr_missing": "Vui lòng dán hoặc chọn ảnh QR Code!"
+                "err_qr_missing": "Vui lòng nhập mã LPA hoặc dán ảnh QR Code!"
             },
             en: {
                 "ui_title": "eSIM Mail Sender",
@@ -304,12 +298,12 @@
                 "lbl_iccid": "ICCID Number",
                 "ph_iccid": "89852...",
                 "lbl_qr": "QR Code Image",
-                "qr_prompt": "Press Ctrl+V to paste or Click",
+                "qr_prompt": "Enter LPA code above or paste image here",
                 "qr_sub_prompt": "Supports JPG, PNG formats",
                 "qr_change": "Change Image",
                 "lbl_single_lpa": "LPA Code (LPA:1$...)",
                 "ph_single_lpa": "LPA:1$...",
-                "desc_single_lpa": "Auto-generates quick install links for both iOS and Android.",
+                "desc_single_lpa": "Enter LPA here, QR Code will be auto-generated below.",
                 "btn_submit": "Send Email Now",
                 "msg_sending_btn": "Processing...",
                 "msg_error_gas": "ERROR: Apps Script Link is required.",
@@ -323,16 +317,13 @@
                 "confirm_clear": "Are you sure you want to clear the form?",
                 "btn_cancel": "Cancel",
                 "btn_confirm": "Clear Form",
-                "err_qr_missing": "Please paste or select a QR Code image!"
+                "err_qr_missing": "Please enter an LPA code or provide a QR image!"
             }
         };
 
         let currentLang = 'vi';
-        
-        // --- CHUỖI DỮ LIỆU GỐC ---
         let qrUploadData = null; 
 
-        // --- Language Toggle Logic ---
         function setLang(lang) {
             currentLang = lang;
             
@@ -357,15 +348,13 @@
             document.getElementById('btnText').innerHTML = `<i class="fas fa-paper-plane mr-2"></i> <span data-i18n="btn_submit">${i18n[lang]["btn_submit"]}</span>`;
         }
 
-        // --- ÉP DUNG LƯỢNG MỌI HÌNH ẢNH TRỰC TIẾP TRÊN TRÌNH DUYỆT ---
+        // --- HÀM XỬ LÝ HÌNH ẢNH (GIỮ NGUYÊN) ---
         function processImageInput(source) {
             qrUploadData = null;
-
             const previewImg = document.getElementById('qr_preview');
             const container = document.getElementById('qr_preview_container');
             const placeholder = document.getElementById('qr_placeholder');
 
-            // Nếu người dùng dán Link web
             if (typeof source === 'string' && source.startsWith('http')) {
                 qrUploadData = source; 
                 previewImg.src = source;
@@ -374,11 +363,9 @@
                 return;
             }
 
-            // Xử lý nén siêu tốc
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Nén tối đa 600px, đủ sắc nét cho QR code mà dung lượng cực nhẹ
                 const MAX_SIZE = 600; 
                 let width = img.width;
                 let height = img.height;
@@ -395,23 +382,19 @@
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 
-                // Đổ nền trắng bảo vệ định dạng PNG trong suốt
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillRect(0, 0, width, height);
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // Nén sang JPEG nhẹ nhất có thể (chất lượng 80%)
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.80);
                 
                 previewImg.src = dataUrl;
-                // Lưu nguyên bản DataURL để gửi cho Google Apps Script
                 qrUploadData = dataUrl; 
 
                 container.classList.remove('hidden');
                 placeholder.classList.add('hidden');
             };
 
-            // Đọc và chuyển hóa dữ liệu đầu vào
             if (source instanceof File || source instanceof Blob) {
                 const reader = new FileReader();
                 reader.onload = (e) => { img.src = e.target.result; };
@@ -421,7 +404,35 @@
             }
         }
 
-        // Bắt sự kiện người dùng tương tác với hộp ảnh
+        // --- TÍNH NĂNG MỚI: TỰ ĐỘNG VẼ QR TỪ MÃ LPA ---
+        document.getElementById('single_lpa_input').addEventListener('input', function(e) {
+            let rawLpa = e.target.value.replace(/\s/g, '');
+            if (!rawLpa) return;
+
+            // Tự thêm tiền tố nếu mã bắt đầu bằng 1$
+            if (rawLpa.startsWith('1$')) {
+                rawLpa = 'LPA:' + rawLpa;
+            }
+
+            // Nếu đây có vẻ là mã LPA hợp lệ, tự sinh luôn QR Code vào form
+            if (rawLpa.startsWith('LPA:1$')) {
+                try {
+                    // Dùng thư viện QRious để vẽ mã QR
+                    const qr = new QRious({
+                        value: rawLpa,
+                        size: 600, // Độ nét cao
+                        level: 'M' // Mức độ dự phòng lỗi trung bình chuẩn
+                    });
+                    
+                    // Chuyển mã QR vừa tạo thành base64 và đẩy vào hàm xử lý ảnh
+                    processImageInput(qr.toDataURL());
+                } catch (err) {
+                    console.error("Lỗi khi tạo mã QR:", err);
+                }
+            }
+        });
+
+        // Bắt sự kiện file
         document.getElementById('qr_file_input').addEventListener('change', function(e) {
             if (e.target.files && e.target.files[0]) {
                 processImageInput(e.target.files[0]);
@@ -432,12 +443,9 @@
             const clipboardData = e.clipboardData || window.clipboardData;
             if (!clipboardData) return;
             const items = clipboardData.items;
-
-            // KIỂM TRA: Nếu người dùng ĐANG CLICK (Focus) vào một ô nhập văn bản nào đó
             const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
             const isInputFocused = (activeTag === 'input' || activeTag === 'textarea');
             
-            // 1. Luôn ưu tiên bắt file ảnh (Kể cả khi đang focus ở ô nhập)
             for (let i = 0; i < items.length; i++) {
                 if (items[i].type.indexOf('image') !== -1) {
                     const blobFile = items[i].getAsFile();
@@ -447,12 +455,8 @@
                 }
             }
 
-            // 2. NẾU ĐANG CLICK CHUỘT VÀO Ô NHẬP VĂN BẢN (LINK IOS, ANDROID...) -> KHÔNG ĐƯỢC CHẶN !
-            if (isInputFocused) {
-                return; // Thoát sớm, để trình duyệt tự do dán chữ/link vào ô văn bản bình thường.
-            }
+            if (isInputFocused) return;
 
-            // 3. Nếu KHÔNG click vào ô văn bản nào, mà người dùng lại dán chữ/link -> Bắt lấy nó thành Link Ảnh
             const html = clipboardData.getData('text/html');
             const text = clipboardData.getData('text/plain');
 
@@ -534,7 +538,7 @@
             return el ? el.value.trim() : '';
         };
 
-        // --- QUY TRÌNH GỬI THẲNG SIÊU TỐC ---
+        // --- Gửi dữ liệu ---
         async function sendEmail(event) {
             event.preventDefault();
             const statusMsg = document.getElementById('status_message');
@@ -559,35 +563,27 @@
             try {
                 statusMsg.innerHTML = `<span class="text-indigo-600 font-medium flex items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"><i class="fas fa-spinner fa-spin mr-2"></i> ${i18n[currentLang]["msg_sending"]}</span>`;
 
-                // --- LOGIC XỬ LÝ MÃ LPA ---
                 let final_ios_link = '#';
                 let final_android_lpa = '#';
-                
-                let rawLpa = getVal('single_lpa_input').replace(/\s/g, ''); // Xóa hết dấu cách thừa
+                let rawLpa = getVal('single_lpa_input').replace(/\s/g, ''); 
                 
                 if (rawLpa) {
                     if (rawLpa.startsWith('http')) {
-                        // Nếu user cố tình dán thẳng một cái link http, xài luôn cho cả 2
                         final_ios_link = rawLpa;
                         final_android_lpa = rawLpa; 
                     } else {
-                        // Bổ sung tự động tiền tố LPA nếu user quên (nhà mạng hay gửi mã 1$...)
                         if (rawLpa.startsWith('1$')) {
                             rawLpa = 'LPA:' + rawLpa;
                         }
-                        
-                        // Nếu đúng chuẩn LPA:1$
                         if (rawLpa.startsWith('LPA:1$')) {
                             final_ios_link = 'https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=' + rawLpa;
-                            final_android_lpa = 'https://esimsetup.android.com/esim_qrcode_provisioning?carddata=' + rawLpa; // Đã thêm tự động link Android
+                            final_android_lpa = 'https://esimsetup.android.com/esim_qrcode_provisioning?carddata=' + rawLpa; 
                         } else {
-                            // Trường hợp dị tật (Không bắt đầu bằng web, không bắt đầu bằng LPA)
                             final_ios_link = rawLpa;
                             final_android_lpa = rawLpa;
                         }
                     }
                 }
-                // -------------------------
 
                 const formData = {
                     sheet_url: SHEET_URL.trim(), 
@@ -599,9 +595,9 @@
                     package_type: getVal('package_type') || '-',
                     check_data_link: getVal('check_data_link'),
                     iccid: getVal('iccid'),
-                    qr_code_image: qrUploadData, // Gửi nguyên cục Base64 đã nén cực nhẹ lên Apps Script
-                    ios_link: final_ios_link,     // Đã tự sinh ra link Apple
-                    android_lpa: final_android_lpa, // Chứa chuẩn mã LPA cho android
+                    qr_code_image: qrUploadData, 
+                    ios_link: final_ios_link,     
+                    android_lpa: final_android_lpa, 
                     promo_banner_image: DEFAULT_PROMO_BANNER_IMAGE,
                     promo_banner_link: DEFAULT_PROMO_BANNER_LINK
                 };
