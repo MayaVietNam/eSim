@@ -828,14 +828,16 @@
                         <div class="font-bold text-slate-700">${item.source}</div>
                         <div class="text-[11px] text-slate-400">${item.sys_order_id || '-'}</div>
                     </td>
-                    <td class="px-6 py-3 font-semibold text-slate-700">${item.order_number}</td>
-                    <td class="px-6 py-3">
-                        <div class="text-slate-800">${item.email}</div>
-                        ${item.cc ? `<div class="text-xs text-slate-400">CC: ${item.cc}</div>` : ''}
+                    <td class="px-6 py-3 font-semibold text-slate-700">
+                        <div class="truncate max-w-[120px]" title="${item.order_number}">${item.order_number}</div>
                     </td>
                     <td class="px-6 py-3">
-                        <div class="text-slate-700 text-xs">${item.package_name}</div>
-                        <div class="font-mono text-[11px] text-slate-500">${item.iccid}</div>
+                        <div class="text-slate-800 truncate max-w-[150px]" title="${item.email}">${item.email}</div>
+                        ${item.cc ? `<div class="text-xs text-slate-400 truncate max-w-[150px]" title="${item.cc}">CC: ${item.cc}</div>` : ''}
+                    </td>
+                    <td class="px-6 py-3">
+                        <div class="text-slate-700 text-xs truncate max-w-[150px]" title="${item.package_name}">${item.package_name}</div>
+                        <div class="font-mono text-[11px] text-slate-500 truncate max-w-[150px]" title="${item.iccid}">${item.iccid}</div>
                     </td>
                 </tr>
             `).join('');
