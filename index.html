@@ -230,11 +230,11 @@
 
     <script>
         // =========================================================================
-        // CẤU HÌNH HỆ THỐNG
+        // CẤU HÌNH HỆ THỐNG - NHỚ SỬA LẠI ĐÚNG LINK CỦA BẠN NHÉ
         // =========================================================================
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwA6FwKH9eQzzfzmnu5r7I_5XrJ19bhhAnew2H_qOg8Yiw9Q4Wou-f-fyYQwpT54T6o/exec"; 
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/18XtBhNZW8J9CAL-L_XMUcIEYiX4_l0wR8br5Pi-cKoY/edit?gid=0#gid=0"; 
-        const SHEET_TAB_NAME = "NeweSim"; // <-- Điền tên Trang Tính (Tab) vào đây
+        const SHEET_TAB_NAME = "NeweSim"; 
         
         const DEFAULT_PROMO_BANNER_IMAGE = "https://cdn.phototourl.com/free/2026-08-06-21cf3c46-0a2b-4e5d-856d-48c8d30d9d13.png"; 
         const DEFAULT_PROMO_BANNER_LINK = "https://global-ez.com/"; 
@@ -242,8 +242,8 @@
         // State Variables
         let currentLang = 'vi';
         let qrUploadData = null; 
-        let currentBundle = []; // Mảng chứa các eSIM đang chờ gửi
-        let historyData = []; // Mảng lưu dữ liệu lịch sử để xuất CSV
+        let currentBundle = [];
+        let historyData = [];
 
         // --- TỪ ĐIỂN SONG NGỮ ---
         const i18n_dict = {
@@ -338,13 +338,13 @@
                 document.getElementById('btn_lang_vi').className = "px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-all text-slate-500 hover:text-slate-700";
             }
 
-            // Quét và cập nhật text cho toàn bộ các thẻ có thuộc tính data-i18n
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (i18n_dict[lang][key]) {
                     el.innerHTML = i18n_dict[lang][key];
                 }
             });
+            resetBtnState(); // Cập nhật lại ngôn ngữ trên nút Submit
         }
 
         const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value.trim() : '';
@@ -479,17 +479,12 @@
 
             currentBundle.push(esimItem);
             
-            // Cập nhật UI
             document.getElementById('bundleCount').innerText = currentBundle.length;
-            document.getElementById('btnBundleCount').innerText = currentBundle.length;
-            
-            const btnSubmit = document.getElementById('btnSubmitBundle');
-            btnSubmit.disabled = false;
-            btnSubmit.classList.remove('opacity-50', 'cursor-not-allowed');
+            resetBtnState();
 
             showToast(`Đã thêm eSIM (ICCID: ${iccid}) vào đơn.`, "success");
 
-            // Xóa form bên phải để nhập tiếp
+            // Làm sạch input QR để điền tiếp
             document.getElementById('iccid').value = '';
             document.getElementById('single_lpa_input').value = '';
             qrUploadData = null; 
@@ -504,7 +499,10 @@
             if (currentBundle.length === 0) { showToast("Giỏ hàng đang trống!", "error"); return; }
 
             const btnSubmit = document.getElementById('btnSubmitBundle');
-            btnSubmit.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> Đang Gửi...`;
+            const loadingText = currentLang === 'vi' ? 'Đang Gửi...' : 'Sending...';
+            
+            // Giữ lại thẻ số lượng để không bị lỗi null pointer khi Reset Form
+            btnSubmit.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> ${loadingText} (<span id="btnBundleCount">${currentBundle.length}</span>)`;
             btnSubmit.disabled = true;
             btnSubmit.classList.add('opacity-75', 'cursor-not-allowed');
 
@@ -532,8 +530,9 @@
                 const result = await response.json();
                 if(result.status === 'success') {
                     showToast(`Đã gửi thành công ${currentBundle.length} eSIM tới ${email}!`, "success");
-                    executeClearForm(); // Reset toàn bộ
-                    fetchHistory(); // Tải lại bảng lịch sử mới nhất
+                    executeClearForm(); // Reset giao diện
+                    resetBtnState();    // Khôi phục nút
+                    fetchHistory();     // Cập nhật bảng
                 } else {
                     showToast(`Lỗi gửi: ${result.message}`, "error");
                     resetBtnState();
@@ -546,10 +545,15 @@
 
         function resetBtnState() {
             const btnSubmit = document.getElementById('btnSubmitBundle');
+            // Cập nhật lại html bên trong đảm bảo luôn tồn tại #btnBundleCount
             btnSubmit.innerHTML = `<i class="fas fa-paper-plane mr-1"></i> <span data-i18n="btn_submit_bundle">${i18n_dict[currentLang]["btn_submit_bundle"]}</span> (<span id="btnBundleCount">${currentBundle.length}</span>)`;
+            
             if(currentBundle.length > 0) {
                 btnSubmit.disabled = false;
-                btnSubmit.classList.remove('opacity-75', 'cursor-not-allowed');
+                btnSubmit.classList.remove('opacity-75', 'opacity-50', 'cursor-not-allowed');
+            } else {
+                btnSubmit.disabled = true;
+                btnSubmit.classList.add('opacity-50', 'cursor-not-allowed');
             }
         }
 
@@ -658,10 +662,12 @@
             // Xóa giỏ hàng
             currentBundle = [];
             document.getElementById('bundleCount').innerText = '0';
-            document.getElementById('btnBundleCount').innerText = '0';
-            const btnSubmit = document.getElementById('btnSubmitBundle');
-            btnSubmit.disabled = true;
-            btnSubmit.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // An toàn kiểm tra phần tử trước khi gán
+            const btnBundleCountEl = document.getElementById('btnBundleCount');
+            if (btnBundleCountEl) {
+                btnBundleCountEl.innerText = '0';
+            }
 
             // Xóa QR preview
             qrUploadData = null; 
@@ -669,10 +675,12 @@
             document.getElementById('qr_preview_container').classList.add('hidden'); 
             document.getElementById('qr_placeholder').classList.remove('hidden');
             
+            // Reset trạng thái nút (bắt buộc gọi lại)
+            resetBtnState();
+
             // Reset mã hệ thống
             generateSysId(); 
             closeModal();
-            showToast("Đã làm mới toàn bộ Form", "info");
         }
     </script>
 </body>
