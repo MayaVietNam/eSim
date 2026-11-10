@@ -2524,7 +2524,7 @@ var DICT = {
   stWait:'送信待ち',stSending:'送信中',stSent:'送信済み',stFailed:'失敗',stDup:'送信済みあり',resend:'それでも再送',retry:'再試行',
   doneN:'{n}件を送信しました',partial:'{ok}件を送信、{ng}件は未送信です（キューで確認）',
   dupMsg:'同じ注文番号・宛先に、{by} が {at} に送信済みです',
-  eAUTH:'ログインの有効期限が切れました。もう一度ログインしてください。',eNOT:'このアカウントは送信を許可されていません。管理者に登録を依頼してください。',eQUOTA:'本日のメール送信上限に達しました。',eNET:'通信に失敗しました。もう一度お試しください。',eSETUP:'接続先URLが未設定です。',eLOG:'送信しましたが、履歴への記録に失敗しました。'},
+  eAUTH:'ログインの有効期限が切れました。もう一度ログインしてください。',eNOT:'このアカウントは送信を許可されていません。管理者に登録を依頼してください。',eQUOTA:'本日のメール送信上限に達しました。',eNET:'通信に失敗しました。もう一度お試しください。',eSETUP:'接続先URLが未設定です。',eLOG:'送信しましたが、履歴への記録に失敗しました。',eSRV:'サーバーからのエラー: ',eFETCH:'サーバーに接続できませんでした。デプロイ設定（アクセスできるユーザー: 全員）を確認してください。'},
  en:{loginTitle:'Log in',loginSub:'Sign in with your registered Google account',loginNote:'The sender\'s email address is recorded in the history.',
   navCompose:'Compose',navQueue:'Send queue',navHistory:'History',logout:'Log out',
   tCompose:'Create an eSIM delivery email',sCompose:'Enter customer and eSIM details, then add to the queue.',tQueue:'Send queue',sQueue:'Send the selected emails in bulk.',tHistory:'Send history',sHistory:'See who sent what, when, and to whom.',
@@ -2538,7 +2538,7 @@ var DICT = {
   stWait:'Waiting',stSending:'Sending',stSent:'Sent',stFailed:'Failed',stDup:'Already sent',resend:'Resend anyway',retry:'Retry',
   doneN:'{n} email(s) sent',partial:'{ok} sent, {ng} not sent (see the queue)',
   dupMsg:'{by} already sent this order to this address at {at}',
-  eAUTH:'Your login expired. Please sign in again.',eNOT:'This account is not allowed to send. Ask an admin to register it.',eQUOTA:'Today\'s email sending limit has been reached.',eNET:'Network error. Please try again.',eSETUP:'The API URL is not set.',eLOG:'Sent, but recording it in the history failed.'},
+  eAUTH:'Your login expired. Please sign in again.',eNOT:'This account is not allowed to send. Ask an admin to register it.',eQUOTA:'Today\'s email sending limit has been reached.',eNET:'Network error. Please try again.',eSETUP:'The API URL is not set.',eLOG:'Sent, but recording it in the history failed.',eSRV:'Server error: ',eFETCH:'Could not reach the server. Check the deployment (Who has access: Anyone).'},
  vi:{loginTitle:'Đăng nhập',loginSub:'Đăng nhập bằng tài khoản Google đã đăng ký',loginNote:'Email người gửi sẽ được ghi vào lịch sử.',
   navCompose:'Soạn email',navQueue:'Hàng chờ gửi',navHistory:'Lịch sử',logout:'Đăng xuất',
   tCompose:'Tạo email giao eSIM',sCompose:'Nhập thông tin khách hàng và eSIM rồi thêm vào hàng chờ.',tQueue:'Hàng chờ gửi',sQueue:'Gửi hàng loạt các email đã chọn.',tHistory:'Lịch sử gửi',sHistory:'Xem ai gửi, khi nào, cho ai.',
@@ -2552,7 +2552,7 @@ var DICT = {
   stWait:'Chờ gửi',stSending:'Đang gửi',stSent:'Đã gửi',stFailed:'Thất bại',stDup:'Đã gửi trước đó',resend:'Vẫn gửi lại',retry:'Thử lại',
   doneN:'Đã gửi {n} email',partial:'Đã gửi {ok}, chưa gửi {ng} (xem hàng chờ)',
   dupMsg:'{by} đã gửi đơn này tới địa chỉ này lúc {at}',
-  eAUTH:'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',eNOT:'Tài khoản này chưa được phép gửi. Hãy nhờ quản trị viên đăng ký.',eQUOTA:'Đã đạt giới hạn gửi email hôm nay.',eNET:'Lỗi mạng. Vui lòng thử lại.',eSETUP:'Chưa cài URL API.',eLOG:'Đã gửi nhưng ghi vào lịch sử thất bại.'}
+  eAUTH:'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',eNOT:'Tài khoản này chưa được phép gửi. Hãy nhờ quản trị viên đăng ký.',eQUOTA:'Đã đạt giới hạn gửi email hôm nay.',eNET:'Lỗi mạng. Vui lòng thử lại.',eSETUP:'Chưa cài URL API.',eLOG:'Đã gửi nhưng ghi vào lịch sử thất bại.',eSRV:'Lỗi máy chủ: ',eFETCH:'Không kết nối được máy chủ. Kiểm tra cấu hình triển khai (Ai có quyền truy cập: Bất kỳ ai).'}
 };
 var LANGS=[['ja','JA'],['en','EN'],['vi','VI']];
 var CHANNELS=['B2B Client','B2C Customer','Shopee','Traveloka'];
@@ -2572,20 +2572,21 @@ function api(body){
   if(!CONFIG.API_URL||CONFIG.API_URL.indexOf('http')!==0)return Promise.reject(new Error('SETUP'));
   body.id_token=S.token;
   return fetch(CONFIG.API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
-   .then(function(r){return r.json();})
+   .then(function(r){return r.text();},function(){throw new Error('FETCH');})
+   .then(function(t){try{return JSON.parse(t);}catch(x){throw new Error('FETCH');}})
    .then(function(j){
      if(j.status==='error'&&/AUTH_(REQUIRED|INVALID|EXPIRED)/.test(j.message||''))throw new Error('AUTH');
      if(j.status==='error'&&/NOT_ALLOWED/.test(j.message||''))throw new Error('NOT');
      return j;});
 }
-function errText(e){var m=(e&&e.message)||'';if(m==='AUTH')return T('eAUTH');if(m==='NOT')return T('eNOT');if(m==='SETUP')return T('eSETUP');return T('eNET');}
+function errText(e){var m=(e&&e.message)||'';if(m==='AUTH')return T('eAUTH');if(m==='NOT')return T('eNOT');if(m==='SETUP')return T('eSETUP');if(m.indexOf('SRV:')===0)return T('eSRV')+m.slice(4);if(m==='FETCH')return T('eFETCH');return T('eNET');}
 
 // ============ ログイン ============
 function jwtExp(t){try{var p=JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return p.exp*1000;}catch(e){return 0;}}
 function onCredential(resp){
   S.token=resp.credential;
   api({action:'whoami'}).then(function(j){
-    if(j.status!=='success')throw new Error('NET');
+    if(j.status!=='success')throw new Error('SRV:'+(j.message||''));
     S.user=j.user;store('ez_tok',S.token);showApp();
   }).catch(function(e){S.token='';store('ez_tok',null);showLogin(errText(e));});
 }
@@ -2807,7 +2808,7 @@ function bindQueue(){
 function loadHistory(){
   $('#hList').innerHTML='<div class="card empty">…</div>';
   api({action:'history'}).then(function(j){
-    if(j.status!=='success')throw new Error('NET');
+    if(j.status!=='success')throw new Error('SRV:'+(j.message||''));
     S.history=j.data||[];renderHistory();
   }).catch(function(e){
     if(e.message==='AUTH'||e.message==='NOT'){showLogin(errText(e));return;}
